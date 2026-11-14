@@ -23,6 +23,7 @@ htmlcov/
 *.exe
 *.dmg
 *.app/
+icon.py
 
 # Editors / OS
 .idea/

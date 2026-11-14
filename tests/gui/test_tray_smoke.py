@@ -36,6 +36,24 @@ def test_icons_render_in_both_unit_modes(qapp):
         assert not icon.isNull()
 
 
+def test_icons_render_in_both_layouts_and_scales(qapp):
+    from speedpulse.ui.icon_renderer import render_rate_icon
+
+    for layout in ("stacked", "wide"):
+        for scale in (0.6, 1.0, 2.0):
+            icon = render_rate_icon(
+                8_000_000, 800_000, use_bits=True, layout=layout, text_scale=scale
+            )
+            assert not icon.isNull(), f"layout={layout} scale={scale}"
+            # Wide layout must produce a 2:1 pixmap; stacked a square one.
+            pixmap = icon.pixmap(64, 64)
+            assert not pixmap.isNull()
+            if layout == "wide":
+                assert pixmap.width() >= pixmap.height()
+            else:
+                assert pixmap.width() == pixmap.height()
+
+
 class TestTray:
     def test_constructs_with_menu(self, qtbot, tmp_path):
         from speedpulse.core.autostart import get_autostart
@@ -118,3 +136,34 @@ class TestTray:
         assert saved == {"done": True}
         assert settings.units.use_bits is True
         assert settings.sampler.interval_seconds == 2.5
+
+    def test_floating_widget_toggle_and_update(self, qtbot, tmp_path):
+        from speedpulse.core.autostart import get_autostart
+        from speedpulse.core.config import Settings
+        from speedpulse.core.rates import RateSample
+        from speedpulse.core.sampler import Sampler, SamplerSnapshot
+        from speedpulse.ui.tray import SpeedPulseTray
+
+        settings = Settings()
+        tray = SpeedPulseTray(
+            settings=settings,
+            settings_path=tmp_path / "config.toml",
+            sampler=Sampler(settings.sampler, reader=lambda: {}),
+            autostart=get_autostart(),
+        )
+        tray._widget_action.setChecked(True)
+        tray._toggle_widget(True)
+        assert tray._widget is not None and tray._widget.isVisible()
+
+        tray._render_snapshot(
+            SamplerSnapshot(timestamp=1.0, total=RateSample(12_345_678, 1_234_567, True))
+        )
+        label_text = tray._widget._label.text()
+        # Default settings are bytes mode.
+        assert "MB/s" in label_text and "KB/s" in label_text
+        assert settings.widget.enabled is True
+
+        tray._toggle_widget(False)
+        assert tray._widget.isVisible() is False
+        assert settings.widget.enabled is False
+        tray.shutdown()

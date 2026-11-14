@@ -46,7 +46,7 @@ Section: net
 Priority: optional
 Architecture: amd64
 Installed-Size: ${SIZE_KB}
-Depends: libgl1, libegl1, libxkbcommon0, libfontconfig1, libdbus-1-3
+Depends: libc6 (>= 2.38), libgl1, libegl1, libxkbcommon0, libxkbcommon-x11-0, libxcb-cursor0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-randr0, libxcb-render-util0, libxcb-shape0, libxcb-xfixes0, libxcb-xinerama0, libdbus-1-3, libfontconfig1
 Maintainer: rafi138 <rafi138@users.noreply.github.com>
 Homepage: https://github.com/rafi138/speedpulse
 Description: Internet speed monitor for your system tray
@@ -54,6 +54,10 @@ Description: Internet speed monitor for your system tray
  interfaces in the system tray, with per-interface selection, bits or
  bytes units, and launch-at-login. Self-contained build (bundled
  Python and Qt runtime).
+ .
+ Built on Ubuntu 24.04: requires glibc 2.38+ (Ubuntu 24.04+, Debian 13+,
+ Fedora 40+). The xcb libs are runtime deps of the bundled Qt plugin and
+ are NOT bundled by PyInstaller.
 CONTROL
 
 OUT="$ROOT/dist/speedpulse_${VERSION}_amd64.deb"

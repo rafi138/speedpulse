@@ -35,7 +35,7 @@ jobs:
       - name: Generate icons
         run: python packaging/make_icons.py
       - name: Build PyInstaller payload
-        run: pyinstaller packaging/speedpulse.spec --noconfirm
+        run: SPEEDPULSE_VERSION="${GITHUB_REF_NAME#v}" pyinstaller packaging/speedpulse.spec --noconfirm
       - name: Smoke test payload (headless)
         run: |
           QT_QPA_PLATFORM=offscreen dist/speedpulse/speedpulse --version
@@ -61,7 +61,7 @@ jobs:
       - name: Generate icons
         run: python packaging/make_icons.py
       - name: Build PyInstaller payload
-        run: pyinstaller packaging/speedpulse.spec --noconfirm
+        run: SPEEDPULSE_VERSION="${GITHUB_REF_NAME#v}" pyinstaller packaging/speedpulse.spec --noconfirm
       - name: Smoke test payload
         run: |
           ./dist/speedpulse/speedpulse.exe --version
@@ -99,7 +99,7 @@ jobs:
       - name: Generate icons
         run: python packaging/make_icons.py
       - name: Build PyInstaller payload
-        run: pyinstaller packaging/speedpulse.spec --noconfirm
+        run: SPEEDPULSE_VERSION="${GITHUB_REF_NAME#v}" pyinstaller packaging/speedpulse.spec --noconfirm
       - name: Smoke test payload (headless)
         run: |
           QT_QPA_PLATFORM=offscreen dist/SpeedPulse.app/Contents/MacOS/speedpulse --version
@@ -113,9 +113,29 @@ jobs:
           path: dist/*.dmg
           if-no-files-found: error
 
+  build-pypi:
+    name: PyPI (sdist + wheel)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade build
+          python -m build --outdir dist/pypi
+          ls -la dist/pypi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pypi-dists
+          path: dist/pypi/*
+          if-no-files-found: error
+
   release:
     name: Assemble GitHub Release
-    needs: [build-linux, build-windows, build-macos]
+    needs: [build-linux, build-windows, build-macos, build-pypi]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -135,24 +155,46 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
           cat > notes.md <<'NOTES'
-          ## SpeedPulse — first release
+          ## SpeedPulse
 
-          Live network throughput in your system tray.
+          Live network throughput in your system tray — plus a floating
+          on-desktop widget, and (via `pip`) a headless-friendly package.
 
           ### Downloads
           | Platform | File |
           |---|---|
           | Linux (Debian/Ubuntu, amd64) | `speedpulse_<version>_amd64.deb` |
-          | Windows (installer) | `SpeedPulse_<version>-setup.exe` |
-          | Windows (portable) | `SpeedPulse_<version>-portable-win64.zip` |
-          | macOS (Apple Silicon) | `SpeedPulse_<version>-macos.dmg` |
+          | Windows (installer) | `SpeedPulse-<version>-setup.exe` |
+          | Windows (portable) | `SpeedPulse-<version>-portable-win64.zip` |
+          | macOS (Apple Silicon) | `SpeedPulse-<version>-macos.dmg` |
+          | Python package (also on PyPI) | `speedpulse-<version>.tar.gz` / `.whl` |
 
           Verify downloads against `SHA256SUMS.txt`.
 
           ### Install notes
-          - **Linux**: `sudo apt install ./speedpulse_<version>_amd64.deb`, then launch "SpeedPulse" from your app menu. GNOME needs the *AppIndicator* extension (preinstalled on Ubuntu); KDE/Xfce/Cinnamon work out of the box.
+          - **Linux**: `sudo apt install ./speedpulse_<version>_amd64.deb` (requires Ubuntu 24.04+/Debian 13+/Fedora 40+), then launch "SpeedPulse" from your app menu. GNOME needs the *AppIndicator* extension (preinstalled on Ubuntu); KDE/Xfce/Cinnamon work out of the box.
           - **Windows**: run the installer (SmartScreen may warn — unsigned build; "More info → Run anyway") or unpack the portable zip.
           - **macOS**: open the dmg and drag SpeedPulse to Applications. Unsigned build: first launch needs *System Settings → Privacy & Security → Open Anyway* (or `xattr -cr /Applications/SpeedPulse.app`). Built for Apple Silicon.
+          - **Tray text too small?** Try Settings → *Tray layout: Side by side* and *Tray text size*, or enable the *floating widget* (tray menu or Settings) for a large, draggable on-desktop display.
+          - **PyPI**: `pip install speedpulse` (or `pipx`) once the publish job for this tag has run; the GitHub link lives in the package metadata.
           NOTES
           sed -i "s/<version>/${TAG#v}/g" notes.md
           gh release create "$TAG" release/* --title "SpeedPulse ${TAG#v}" --notes-file notes.md
+
+  publish-pypi:
+    name: Publish to PyPI (trusted publishing)
+    needs: [release]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    environment:
+      name: pypi
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pypi-dists
+          path: dist
+      - name: Publish distributions
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist

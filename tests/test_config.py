@@ -91,3 +91,52 @@ def test_save_leaves_no_temp_file_behind(tmp_path):
     path = tmp_path / "config.toml"
     save(path, Settings())
     assert list(tmp_path.iterdir()) == [path]
+
+
+def test_tray_layout_validation(tmp_path):
+    path = tmp_path / "config.toml"
+    path.write_text('[display]\nlayout = "wide"\n', encoding="utf-8")
+    assert load(path).display.layout == "wide"
+
+    path.write_text('[display]\nlayout = "diagonal"\n', encoding="utf-8")
+    assert load(path).display.layout == "stacked"  # invalid -> default
+
+
+def test_text_scale_is_clamped(tmp_path):
+    path = tmp_path / "config.toml"
+    path.write_text("[display]\ntext_scale = 5.0\n", encoding="utf-8")
+    assert load(path).display.text_scale == 2.0
+
+    path.write_text("[display]\ntext_scale = 0.05\n", encoding="utf-8")
+    assert load(path).display.text_scale == 0.6
+
+
+def test_display_options_round_trip(tmp_path):
+    settings = Settings()
+    settings.display.layout = "wide"
+    settings.display.text_scale = 1.5
+    path = tmp_path / "config.toml"
+    save(path, settings)
+    assert load(path).display == settings.display
+
+
+def test_widget_config_round_trip_and_clamps(tmp_path):
+    settings = Settings()
+    settings.widget.enabled = True
+    settings.widget.font_pt = 42
+    settings.widget.x = 150
+    settings.widget.y = -80
+    settings.widget.width = 320
+    settings.widget.height = 110
+    path = tmp_path / "config.toml"
+    save(path, settings)
+    assert load(path).widget == settings.widget
+
+    path.write_text(
+        "[widget]\nfont_pt = 500\nwidth = 99999\nheight = 1\nx = -99999\n", encoding="utf-8"
+    )
+    loaded = load(path).widget
+    assert loaded.font_pt == 96  # clamped to MAX_WIDGET_FONT_PT
+    assert loaded.width == 1200
+    assert loaded.height == 50
+    assert loaded.x == -10000

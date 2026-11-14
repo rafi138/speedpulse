@@ -27,6 +27,15 @@ SCHEMA_VERSION = 1
 MIN_INTERVAL_SECONDS = 0.25
 MAX_INTERVAL_SECONDS = 10.0
 THEMES = ("auto", "light", "dark")
+TRAY_LAYOUTS = ("stacked", "wide")
+MIN_TEXT_SCALE = 0.6
+MAX_TEXT_SCALE = 2.0
+MIN_WIDGET_FONT_PT = 8
+MAX_WIDGET_FONT_PT = 96
+MIN_WIDGET_W = 120
+MAX_WIDGET_W = 1200
+MIN_WIDGET_H = 50
+MAX_WIDGET_H = 600
 
 
 @dataclass
@@ -38,6 +47,20 @@ class UnitsConfig:
 @dataclass
 class DisplayConfig:
     theme: str = "auto"  # auto | light | dark
+    layout: str = "stacked"  # stacked (two lines, square) | wide (side by side)
+    text_scale: float = 1.0  # tray text size multiplier
+
+
+@dataclass
+class WidgetConfig:
+    """Floating on-desktop rates display (for when the tray slot is too small)."""
+
+    enabled: bool = False  # show at startup
+    font_pt: int = 28
+    x: int = 80
+    y: int = 80
+    width: int = 260
+    height: int = 90
 
 
 @dataclass
@@ -53,6 +76,7 @@ class Settings:
     units: UnitsConfig = field(default_factory=UnitsConfig)
     display: DisplayConfig = field(default_factory=DisplayConfig)
     sampler: SamplerConfig = field(default_factory=SamplerConfig)
+    widget: WidgetConfig = field(default_factory=WidgetConfig)
     autostart: bool = False
 
 
@@ -87,13 +111,15 @@ def load(path: Path) -> Settings:
     _apply(settings.units, raw.get("units"), _UNITS_KEYS)
     _apply(settings.display, raw.get("display"), _DISPLAY_KEYS)
     _apply(settings.sampler, raw.get("sampler"), _SAMPLER_KEYS)
+    _apply(settings.widget, raw.get("widget"), _WIDGET_KEYS)
     settings.autostart = _as_bool(raw.get("autostart"), settings.autostart)
     return settings
 
 
 _UNITS_KEYS = {"use_bits", "binary_units"}
-_DISPLAY_KEYS = {"theme"}
+_DISPLAY_KEYS = {"theme", "layout", "text_scale"}
 _SAMPLER_KEYS = {"interval_seconds", "max_gap_seconds", "include_vpn", "excluded_interfaces"}
+_WIDGET_KEYS = {"enabled", "font_pt", "x", "y", "width", "height"}
 
 
 def _apply(target: object, section: object, known: set[str]) -> None:
@@ -110,6 +136,24 @@ def _apply(target: object, section: object, known: set[str]) -> None:
             target.binary_units = _as_bool(value, target.binary_units)  # type: ignore[attr-defined]
         elif key == "theme":
             target.theme = _as_theme(value, target.theme)  # type: ignore[attr-defined]
+        elif key == "layout":
+            target.layout = _as_layout(value, target.layout)  # type: ignore[attr-defined]
+        elif key == "text_scale":
+            target.text_scale = _as_text_scale(value, target.text_scale)  # type: ignore[attr-defined]
+        elif key == "font_pt":
+            setattr(
+                target,
+                key,
+                _as_clamped_int(
+                    value, getattr(target, key), MIN_WIDGET_FONT_PT, MAX_WIDGET_FONT_PT
+                ),
+            )
+        elif key == "x" or key == "y":
+            setattr(target, key, _as_int(value, getattr(target, key), -10000, 10000))
+        elif key == "width":
+            target.width = _as_clamped_int(value, target.width, MIN_WIDGET_W, MAX_WIDGET_W)  # type: ignore[attr-defined]
+        elif key == "height":
+            target.height = _as_clamped_int(value, target.height, MIN_WIDGET_H, MAX_WIDGET_H)  # type: ignore[attr-defined]
         elif key == "interval_seconds":
             target.interval_seconds = _as_interval(value, target.interval_seconds)  # type: ignore[attr-defined]
         elif key == "max_gap_seconds":
@@ -118,6 +162,8 @@ def _apply(target: object, section: object, known: set[str]) -> None:
             target.include_vpn = _as_bool(value, target.include_vpn)  # type: ignore[attr-defined]
         elif key == "excluded_interfaces":
             target.excluded_interfaces = _as_str_list(value, target.excluded_interfaces)  # type: ignore[attr-defined]
+        elif key == "enabled":
+            target.enabled = _as_bool(value, target.enabled)  # type: ignore[attr-defined]
 
 
 def _as_bool(value: object, default: bool) -> bool:
@@ -138,6 +184,25 @@ def _as_interval(value: object, default: float) -> float:
 
 def _as_theme(value: object, default: str) -> str:
     return value if value in THEMES else default
+
+
+def _as_layout(value: object, default: str) -> str:
+    return value if value in TRAY_LAYOUTS else default
+
+
+def _as_text_scale(value: object, default: float) -> float:
+    candidate = _as_positive_float(value, default)
+    return min(max(candidate, MIN_TEXT_SCALE), MAX_TEXT_SCALE)
+
+
+def _as_int(value: object, default: int, low: int, high: int) -> int:
+    if isinstance(value, int) and not isinstance(value, bool):
+        return min(max(value, low), high)
+    log.debug("Ignoring invalid int value: %r", value)
+    return default
+
+
+_as_clamped_int = _as_int
 
 
 def _as_str_list(value: object, default: list[str]) -> list[str]:

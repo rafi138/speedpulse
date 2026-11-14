@@ -1,9 +1,13 @@
 # PyInstaller spec for SpeedPulse: windowed, one directory per OS.
 # Run from the repository root:  pyinstaller packaging/speedpulse.spec --noconfirm
+# The macOS bundle version comes from SPEEDPULSE_VERSION (set by release.yml).
 import os
 import sys
 
 ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
+VERSION = os.environ.get("SPEEDPULSE_VERSION", "0.0.0.dev0")
+ICNS = os.path.join(ROOT, "packaging", "icons", "speedpulse.icns")
+BUNDLE_ICON = ICNS if os.path.exists(ICNS) else None
 
 blocklist = [
     # Qt modules the tray app never touches; excluding keeps bundles small.
@@ -76,11 +80,13 @@ if sys.platform == "darwin":
     bundle = BUNDLE(
         coll,
         name="SpeedPulse.app",
+        icon=BUNDLE_ICON,
         info_plist={
             "CFBundleName": "SpeedPulse",
             "CFBundleDisplayName": "SpeedPulse",
             "CFBundleIdentifier": "org.speedpulse.app",
-            "CFBundleShortVersionString": "0.1.0",
+            "CFBundleShortVersionString": VERSION,
+            "CFBundleVersion": VERSION,
             "LSUIElement": True,  # menu-bar/tray app: no Dock icon window churn
         },
     )

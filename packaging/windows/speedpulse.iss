@@ -6,7 +6,10 @@
 ; release.yml and by local builds), so no slash-arguments are needed:
 ; Git Bash on CI mangles /D-style flags into Windows paths.
 #ifndef AppVersion
-#define AppVersion Environment("SPEEDPULSE_VERSION")
+#define AppVersion GetEnv("SPEEDPULSE_VERSION")
+#endif
+#if AppVersion == ""
+#pragma error "Set SPEEDPULSE_VERSION (env var) or pass /DAppVersion=x.y.z"
 #endif
 
 [Setup]

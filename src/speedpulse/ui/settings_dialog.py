@@ -18,7 +18,11 @@ from PySide6 import QtCore, QtWidgets
 from ..core.autostart import AutostartBase, AutostartError
 from ..core.config import (
     MAX_INTERVAL_SECONDS,
+    MAX_TEXT_SCALE,
+    MAX_WIDGET_FONT_PT,
     MIN_INTERVAL_SECONDS,
+    MIN_TEXT_SCALE,
+    MIN_WIDGET_FONT_PT,
     THEMES,
     Settings,
 )
@@ -91,6 +95,19 @@ class SettingsDialog(QtWidgets.QDialog):
         self._theme_combo = QtWidgets.QComboBox()
         self._theme_combo.addItems(list(THEMES))
         form.addRow("Tray text colour:", self._theme_combo)
+
+        self._layout_combo = QtWidgets.QComboBox()
+        self._layout_combo.addItem("Two lines (square icon)", "stacked")
+        self._layout_combo.addItem("Side by side (wide icon)", "wide")
+        form.addRow("Tray layout:", self._layout_combo)
+
+        self._text_scale_spin = QtWidgets.QDoubleSpinBox()
+        self._text_scale_spin.setRange(MIN_TEXT_SCALE, MAX_TEXT_SCALE)
+        self._text_scale_spin.setSingleStep(0.1)
+        self._text_scale_spin.setDecimals(2)
+        self._text_scale_spin.setSuffix("x")
+        self._text_scale_spin.setToolTip("Adjust the tray text size (1.0x is the default).")
+        form.addRow("Tray text size:", self._text_scale_spin)
         layout.addLayout(form)
 
         # -- interfaces --------------------------------------------------
@@ -111,6 +128,23 @@ class SettingsDialog(QtWidgets.QDialog):
         interfaces_layout.addWidget(self._include_vpn_check)
         interfaces_layout.addWidget(self._interface_list)
         layout.addWidget(interfaces_box)
+
+        # -- floating widget ----------------------------------------------
+        widget_box = QtWidgets.QGroupBox("Floating widget (large on-desktop display)")
+        widget_layout = QtWidgets.QVBoxLayout(widget_box)
+        self._widget_check = QtWidgets.QCheckBox("Show floating widget")
+        self._widget_check.setToolTip(
+            "A draggable, always-on-top display with large text - for when "
+            "the tray slot is too small. Also available from the tray menu."
+        )
+        font_form = QtWidgets.QFormLayout()
+        self._widget_font_spin = QtWidgets.QSpinBox()
+        self._widget_font_spin.setRange(MIN_WIDGET_FONT_PT, MAX_WIDGET_FONT_PT)
+        self._widget_font_spin.setSuffix(" pt")
+        font_form.addRow("Font size:", self._widget_font_spin)
+        widget_layout.addWidget(self._widget_check)
+        widget_layout.addLayout(font_form)
+        layout.addWidget(widget_box)
 
         # -- autostart ----------------------------------------------------
         self._autostart_check = QtWidgets.QCheckBox("Launch at startup")
@@ -144,6 +178,11 @@ class SettingsDialog(QtWidgets.QDialog):
 
         self._interval_spin.setValue(self._settings.sampler.interval_seconds)
         self._theme_combo.setCurrentText(self._settings.display.theme)
+        layout_index = self._layout_combo.findData(self._settings.display.layout)
+        self._layout_combo.setCurrentIndex(max(0, layout_index))
+        self._text_scale_spin.setValue(self._settings.display.text_scale)
+        self._widget_check.setChecked(self._settings.widget.enabled)
+        self._widget_font_spin.setValue(self._settings.widget.font_pt)
         self._include_vpn_check.setChecked(self._settings.sampler.include_vpn)
         self._autostart_check.setChecked(self._settings.autostart and self._autostart.is_enabled())
         self._populate_interfaces()
@@ -182,6 +221,10 @@ class SettingsDialog(QtWidgets.QDialog):
         draft.units.use_bits = self._bits_radio.isChecked()
         draft.units.binary_units = self._binary_check.isChecked()
         draft.display.theme = self._theme_combo.currentText()
+        draft.display.layout = self._layout_combo.currentData()
+        draft.display.text_scale = self._text_scale_spin.value()
+        draft.widget.enabled = self._widget_check.isChecked()
+        draft.widget.font_pt = self._widget_font_spin.value()
         draft.sampler.interval_seconds = self._interval_spin.value()
         draft.sampler.include_vpn = self._include_vpn_check.isChecked()
         draft.sampler.excluded_interfaces = self._merged_exclusions()

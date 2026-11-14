@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Floating widget**: draggable, resizable, always-on-top desktop display
+  with large green/blue rates — for panels whose tray slot is too small to
+  hold legible tray text. Enable from the tray menu or Settings; position
+  and size are remembered.
+- **Tray layout & text size options**: choose between two-line (square) and
+  side-by-side (wide, text-width-sized) tray text, and scale the tray text
+  size from 0.6x to 2x in Settings.
 - Live download/upload throughput in the system tray, sampled from OS
   interface counters with suspend/resume and counter-reset guards.
 - Per-interface selection with automatic filtering of loopback and virtual

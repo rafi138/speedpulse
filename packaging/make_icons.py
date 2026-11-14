@@ -13,7 +13,7 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6 import QtCore, QtGui, QtWidgets  # noqa: E402
+from PySide6 import QtCore, QtGui, QtWidgets
 
 OUT = Path(__file__).resolve().parent / "icons"
 PNG_SIZES = [16, 22, 24, 32, 48, 64, 128, 256]
@@ -66,9 +66,7 @@ def draw_icon(size: int) -> QtGui.QPixmap:
         painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
         radius = size * 0.22
         background = QtGui.QPainterPath()
-        background.addRoundedRect(
-            QtCore.QRectF(0.0, 0.0, float(size), float(size)), radius, radius
-        )
+        background.addRoundedRect(QtCore.QRectF(0.0, 0.0, float(size), float(size)), radius, radius)
         painter.fillPath(background, QtGui.QColor(BG))
         _arrow(painter, size * 0.34, direction=+1, color=DOWN, size=size)
         _arrow(painter, size * 0.66, direction=-1, color=UP, size=size)
@@ -78,7 +76,9 @@ def draw_icon(size: int) -> QtGui.QPixmap:
 
 
 def main() -> int:
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+    # QPixmap needs a QGuiApplication instance; offscreen platform is set above.
+    if QtWidgets.QApplication.instance() is None:
+        QtWidgets.QApplication(sys.argv)
     OUT.mkdir(parents=True, exist_ok=True)
     for size in PNG_SIZES:
         target = OUT / f"speedpulse_{size}.png"
@@ -93,6 +93,10 @@ def main() -> int:
     ico_target = OUT / "speedpulse.ico"
     base.save(str(ico_target), format="ICO", sizes=[(s, s) for s in ICO_SIZES])
     print(f"wrote {ico_target}")
+
+    icns_target = OUT / "speedpulse.icns"
+    base.save(str(icns_target), format="ICNS", sizes=[(s, s) for s in ICO_SIZES])
+    print(f"wrote {icns_target}")
     return 0
 
 

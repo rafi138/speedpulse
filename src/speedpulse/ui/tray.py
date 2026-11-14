@@ -12,6 +12,7 @@ from ..core.autostart import AutostartBase, AutostartError
 from ..core.config import Settings
 from ..core.sampler import Sampler, SamplerSnapshot
 from ..core.units import format_rate
+from .floating_widget import FloatingWidget
 from .icon_renderer import (
     BASE_LOGICAL_SIZE,
     compact_pair,
@@ -44,6 +45,7 @@ class SpeedPulseTray(QtWidgets.QSystemTrayIcon):
         self._paused = False
         self._last_key: tuple[str, str] | None = None
         self._dialog: SettingsDialog | None = None
+        self._widget: FloatingWidget | None = None
 
         self._build_menu()
         self._timer = QtCore.QTimer(self)
@@ -78,6 +80,9 @@ class SpeedPulseTray(QtWidgets.QSystemTrayIcon):
         self._autostart_action = QtGui.QAction("Launch at &startup", menu, checkable=True)
         self._autostart_action.triggered.connect(self._toggle_autostart)
 
+        self._widget_action = QtGui.QAction("Show &floating widget", menu, checkable=True)
+        self._widget_action.triggered.connect(self._toggle_widget)
+
         settings_action = QtGui.QAction("&Settings…", menu)
         settings_action.triggered.connect(self.open_settings)
 
@@ -89,6 +94,7 @@ class SpeedPulseTray(QtWidgets.QSystemTrayIcon):
 
         menu.addAction(self._pause_action)
         menu.addAction(self._bits_action)
+        menu.addAction(self._widget_action)
         menu.addAction(self._autostart_action)
         menu.addSeparator()
         menu.addAction(settings_action)
@@ -138,6 +144,8 @@ class SpeedPulseTray(QtWidgets.QSystemTrayIcon):
                     use_bits=use_bits,
                     binary_units=binary_units,
                     theme=theme,
+                    layout=self._settings.display.layout,
+                    text_scale=self._settings.display.text_scale,
                     size=BASE_LOGICAL_SIZE,
                     device_pixel_ratio=self._dpr(),
                 )
@@ -148,6 +156,10 @@ class SpeedPulseTray(QtWidgets.QSystemTrayIcon):
             f"↓ {format_rate(total.down_bps, use_bits=use_bits, binary_units=binary_units)}  "
             f"↑ {format_rate(total.up_bps, use_bits=use_bits, binary_units=binary_units)}"
         )
+        if self._widget is not None and self._widget.isVisible():
+            self._widget.update_rates(
+                total.down_bps, total.up_bps, use_bits=use_bits, binary_units=binary_units
+            )
 
     @staticmethod
     def _dpr() -> float:
@@ -161,7 +173,30 @@ class SpeedPulseTray(QtWidgets.QSystemTrayIcon):
         self._sampler.apply_config(self._settings.sampler)
         self._bits_action.setChecked(self._settings.units.use_bits)
         self._autostart_action.setChecked(self._settings.autostart and self._autostart.is_enabled())
+        self._widget_action.setChecked(self._settings.widget.enabled)
+        if self._settings.widget.enabled:
+            self._show_widget()
+        elif self._widget is not None and self._widget.isVisible():
+            self._widget.close()
         self._last_key = None  # force icon re-render with new units/theme
+
+    def _toggle_widget(self, checked: bool) -> None:
+        if checked:
+            self._show_widget()
+        elif self._widget is not None:
+            self._widget.close()
+        self._settings.widget.enabled = checked
+        self._save()
+
+    def _show_widget(self) -> None:
+        if self._widget is None:
+            self._widget = FloatingWidget(
+                self._settings,
+                on_geometry_changed=self._save,
+            )
+        self._widget.sync_from_config()
+        self._widget.show()
+        self._widget.raise_()
 
     def open_settings(self) -> None:
         if self._dialog is None:
@@ -244,6 +279,9 @@ class SpeedPulseTray(QtWidgets.QSystemTrayIcon):
 
     def shutdown(self) -> None:
         self._timer.stop()
+        if self._widget is not None:
+            self._widget.persist_geometry()
+            self._widget.close()
         self.hide()
 
     def _quit(self) -> None:

@@ -10,6 +10,10 @@ interface counters — no external servers involved.
 ## Features (v0.1)
 
 - **Live throughput** — aggregate down/up rates updated every second
+- **Floating widget** — a large, draggable, always-on-top desktop display
+  for when the tray slot is too small; resizable, position remembered
+- **Adjustable tray text** — two-line (square) or side-by-side (wide)
+  layout, 0.6x–2x text size
 - **Per-interface control** — physical interfaces by default; virtual
   interfaces (docker, bridges, loopback) filtered out; VPN tunnels opt-in
 - **Bits or bytes** — Mbps or MB/s, decimal or 1024-based units
@@ -29,7 +33,17 @@ interface counters — no external servers involved.
 
 ## Install
 
-**Not yet published.** Until the first release, install from source:
+**PyPI (once the v0.1.0 publish job has run):**
+
+```bash
+pip install speedpulse        # or: pipx install speedpulse
+```
+
+**From the GitHub releases** (preferred for end users): grab the `.deb`,
+Windows installer/portable, or macOS dmg from the
+[releases page](https://github.com/rafi138/speedpulse/releases).
+
+**From source:**
 
 ```bash
 git clone https://github.com/rafi138/speedpulse
