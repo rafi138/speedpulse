@@ -14,7 +14,8 @@ AppPublisherURL=https://github.com/rafi138/speedpulse
 DefaultDirName={autopf}\SpeedPulse
 DefaultGroupName=SpeedPulse
 DisableProgramGroupPage=yes
-OutputDir=dist\installer
+; relative to THIS script's directory (packaging/windows/) -> repo dist/
+OutputDir=..\..\dist\installer
 OutputBaseFilename=SpeedPulse-{#AppVersion}-setup
 Compression=lzma2
 SolidCompression=yes
