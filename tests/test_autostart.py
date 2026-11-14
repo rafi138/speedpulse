@@ -1,5 +1,6 @@
 import plistlib
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -102,7 +103,13 @@ class TestCommon:
 
     def test_app_command_starts_with_executable(self):
         command = app_command()
-        assert command[0] == sys.executable
+        if sys.platform == "win32":
+            # Dev mode deliberately prefers pythonw.exe (no console window).
+            pythonw = str(Path(sys.executable).with_name("pythonw.exe"))
+            expected = pythonw if Path(pythonw).exists() else sys.executable
+            assert command[0] == expected
+        else:
+            assert command[0] == sys.executable
         assert len(command) >= 1
 
     def test_factory_matches_platform(self):

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 import plistlib
+import re
 import subprocess
 import sys
 from abc import ABC, abstractmethod
@@ -86,6 +87,8 @@ class AutostartBase(ABC):
 class LinuxAutostart(AutostartBase):
     FILENAME = "speedpulse.desktop"
 
+    _EXEC_LINE_RE = re.compile(r"^Exec=(.*)$", re.MULTILINE)
+
     _TEMPLATE = """[Desktop Entry]
 Type=Application
 Name=SpeedPulse
@@ -117,8 +120,13 @@ X-GNOME-Autostart-enabled=true
             text = path.read_text(encoding="utf-8")
         except OSError:
             return False
-        # Quoted or not, the Exec line must reference this install.
-        return app_command()[0] in text
+        # Compare the *parsed* Exec value against the escaped form of the
+        # current command: raw substring matching fails on Windows paths
+        # because enable() escapes backslashes (C:\app -> "C:\\app").
+        match = self._EXEC_LINE_RE.search(text)
+        if not match:
+            return False
+        return match.group(1).strip() == _quote_exec(app_command())
 
 
 class WindowsAutostart(AutostartBase):
