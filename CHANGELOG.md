@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-11-15
+
+### Fixed
+
+- The bundled Qt xcb platform plugin requires the xcb-util library family
+  at runtime; PyInstaller does not bundle them and the deb did not declare
+  them all, so the app could fail to start on X11 sessions on minimal
+  systems. The deb now declares the complete set, CI bundles it, and a new
+  X11 boot smoke test guards it.
+- macOS bundle ships the SpeedPulse icon (.icns) and version metadata.
+
+### Added
+
+- Floating widget (large draggable on-desktop rates display), tray layout
+  and text size options — see the 0.1.0 unreleased notes below for detail.
+
 ## [Unreleased]
 
 ### Added

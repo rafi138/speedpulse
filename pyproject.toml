@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "speedpulse"
-version = "0.1.0"
+version = "0.1.1"
 description = "Cross-platform internet speed monitor for your system tray: live throughput plus on-demand speed tests."
 readme = "README.md"
 license = { text = "MIT" }
