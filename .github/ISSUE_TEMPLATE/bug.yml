@@ -1,0 +1,58 @@
+name: Bug report
+description: Something is broken or behaves oddly
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to file a bug — details below make it fixable.
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux (GNOME)
+        - Linux (KDE)
+        - Linux (other desktop)
+        - Windows
+        - macOS
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version / distro
+      placeholder: e.g. Fedora 43, Windows 11 24H2, macOS 15.2
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: SpeedPulse version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Install method
+      options:
+        - From source (pip install -e .)
+        - .deb package
+        - Windows installer / portable
+        - macOS dmg
+        - pipx / PyPI
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Output of running `speedpulse -v` in a terminal, if possible.
+      render: shell
