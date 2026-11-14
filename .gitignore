@@ -16,8 +16,7 @@ venv/
 coverage.xml
 htmlcov/
 
-# Packaging artifacts
-*.spec
+# Packaging artifacts (our hand-maintained spec lives in packaging/)
 *.deb
 *.rpm
 *.AppImage

@@ -46,6 +46,11 @@ dev = [
     "pyright==1.1.414",
     "pre-commit>=3.7",
 ]
+# release packaging: PyInstaller onedir payload + icon generation (ICO via Pillow)
+build = [
+    "pyinstaller>=6.10",
+    "pillow>=10.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/rafi138/speedpulse"
