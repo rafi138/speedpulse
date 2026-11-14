@@ -75,3 +75,19 @@ def test_empty_string_list_round_trips(tmp_path):
     path = tmp_path / "config.toml"
     save(path, settings)
     assert load(path).sampler.excluded_interfaces == []
+
+
+def test_exotic_strings_round_trip(tmp_path):
+    settings = Settings()
+    settings.sampler.excluded_interfaces = ['eth"0', "nün", "back\\slash"]
+    path = tmp_path / "config.toml"
+    save(path, settings)
+    text = path.read_text(encoding="utf-8")
+    assert "nün" in text  # literal UTF-8, never JSON surrogate-pair escapes
+    assert load(path) == settings
+
+
+def test_save_leaves_no_temp_file_behind(tmp_path):
+    path = tmp_path / "config.toml"
+    save(path, Settings())
+    assert list(tmp_path.iterdir()) == [path]

@@ -65,25 +65,28 @@ class SpeedPulseTray(QtWidgets.QSystemTrayIcon):
 
     # ---------------------------------------------------------------- menu
     def _build_menu(self) -> None:
-        self._pause_action = QtGui.QAction("&Pause updates", checkable=True)
+        # Parent every action to the menu: parentless QActions are owned by
+        # Python and can be garbage-collected once this method returns,
+        # silently emptying the tray menu mid-session.
+        menu = QtWidgets.QMenu()
+        self._pause_action = QtGui.QAction("&Pause updates", menu, checkable=True)
         self._pause_action.triggered.connect(self._toggle_pause)
 
-        self._bits_action = QtGui.QAction("Show &bits per second (bps/Mbps)", checkable=True)
+        self._bits_action = QtGui.QAction("Show &bits per second (bps/Mbps)", menu, checkable=True)
         self._bits_action.triggered.connect(self._toggle_bits)
 
-        self._autostart_action = QtGui.QAction("Launch at &startup", checkable=True)
+        self._autostart_action = QtGui.QAction("Launch at &startup", menu, checkable=True)
         self._autostart_action.triggered.connect(self._toggle_autostart)
 
-        settings_action = QtGui.QAction("&Settings…")
+        settings_action = QtGui.QAction("&Settings…", menu)
         settings_action.triggered.connect(self.open_settings)
 
-        about_action = QtGui.QAction("&About SpeedPulse")
+        about_action = QtGui.QAction("&About SpeedPulse", menu)
         about_action.triggered.connect(self._show_about)
 
-        quit_action = QtGui.QAction("&Quit")
+        quit_action = QtGui.QAction("&Quit", menu)
         quit_action.triggered.connect(self._quit)
 
-        menu = QtWidgets.QMenu()
         menu.addAction(self._pause_action)
         menu.addAction(self._bits_action)
         menu.addAction(self._autostart_action)
@@ -168,6 +171,11 @@ class SpeedPulseTray(QtWidgets.QSystemTrayIcon):
                 autostart=self._autostart,
                 on_saved=self._apply_settings,
             )
+        else:
+            # The dialog is cached: refresh it from the live settings, or
+            # saving would resurrect stale values and clobber tray-menu
+            # changes (units, autostart) made since it was last open.
+            self._dialog.reload()
         self._dialog.show()
         self._dialog.raise_()
         self._dialog.activateWindow()

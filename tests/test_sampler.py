@@ -102,6 +102,24 @@ def test_reader_failure_is_swallowed(driver):
     assert snapshot.has_rate is False
 
 
+def test_max_interval_survives_timer_lateness(driver):
+    # At interval=10.00 a Qt timer always fires slightly late (>=5% slack
+    # is permitted); the gap guard must tolerate that or every sample at
+    # the slowest setting would be judged stale forever.
+    config = SamplerConfig(interval_seconds=10.0)
+    sampler = driver(
+        [
+            (0.0, {"eth0": (0, 0)}),
+            (10.05, {"eth0": (1_256_250, 0)}),  # 10.05 s later: late tick
+        ],
+        config=config,
+    )
+    sampler.poll()
+    snapshot = sampler.poll()
+    assert snapshot.has_rate
+    assert snapshot.total.down_bps == pytest.approx(1_000_000.0)
+
+
 def test_config_change_rebaselines(driver):
     sampler = driver(
         [

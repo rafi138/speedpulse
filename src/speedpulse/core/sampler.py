@@ -81,6 +81,16 @@ class Sampler:
             excluded=set(self._config.excluded_interfaces),
         )
 
+    def _effective_gap(self) -> float:
+        """Gap guard must tolerate one slow tick.
+
+        The default gap (10 s) equals the maximum selectable interval
+        (10 s); a calculator keyed to the raw setting would then judge
+        every sample stale at interval=10.00. Guarantee headroom of at
+        least three ticks.
+        """
+        return max(self._config.max_gap_seconds, self._config.interval_seconds * 3)
+
     def poll(self) -> SamplerSnapshot:
         """Read counters once and return the rates since the previous poll."""
         now = time.monotonic()
@@ -103,7 +113,7 @@ class Sampler:
             rx, tx = counters[name]
             calc = self._calculators.get(name)
             if calc is None:
-                calc = RateCalculator(max_gap_seconds=self._config.max_gap_seconds)
+                calc = RateCalculator(max_gap_seconds=self._effective_gap())
                 self._calculators[name] = calc
             rate = calc.update(rx, tx, now)
             snapshots.append(InterfaceSnapshot(name=name, rate=rate))

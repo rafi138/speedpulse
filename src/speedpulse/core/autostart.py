@@ -47,7 +47,14 @@ def app_command() -> list[str]:
 
 
 def _quote_exec_part(part: str) -> str:
-    return f'"{part}"' if (" " in part or '"' in part) else part
+    """Quote one argv element for a freedesktop Exec line.
+
+    Everything is quoted (the spec permits it unconditionally); inside
+    double quotes ``"`` and ``\\`` must be escaped, and a literal ``%``
+    must be doubled because Exec treats bare ``%`` as a field code.
+    """
+    escaped = part.replace("\\", "\\\\").replace('"', '\\"').replace("%", "%%")
+    return f'"{escaped}"'
 
 
 def _quote_exec(command: list[str]) -> str:
@@ -68,7 +75,12 @@ class AutostartBase(ABC):
 
     @abstractmethod
     def is_enabled(self) -> bool:
-        """Whether the OS currently has a registration for this app."""
+        """Whether the OS currently has a *live* registration for this app.
+
+        Implementations must verify the registration still points at this
+        install, not merely that a file/key exists — otherwise a moved or
+        deleted app leaves a dead registration that the UI reports as on.
+        """
 
 
 class LinuxAutostart(AutostartBase):
@@ -98,7 +110,15 @@ X-GNOME-Autostart-enabled=true
         self._path().unlink(missing_ok=True)
 
     def is_enabled(self) -> bool:
-        return self._path().exists()
+        path = self._path()
+        if not path.exists():
+            return False
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            return False
+        # Quoted or not, the Exec line must reference this install.
+        return app_command()[0] in text
 
 
 class WindowsAutostart(AutostartBase):
@@ -141,10 +161,11 @@ class WindowsAutostart(AutostartBase):
                 0,
                 winreg.KEY_QUERY_VALUE,  # pyright: ignore[reportAttributeAccessIssue]
             ) as key:
-                winreg.QueryValueEx(key, APP_VALUE_NAME)  # pyright: ignore[reportAttributeAccessIssue]
+                stored = winreg.QueryValueEx(key, APP_VALUE_NAME)[0]  # pyright: ignore[reportAttributeAccessIssue]
         except OSError:
             return False
-        return True
+        # Registration must match this install, not just exist.
+        return stored == subprocess.list2cmdline(app_command())
 
 
 class MacOSAutostart(AutostartBase):
@@ -171,7 +192,18 @@ class MacOSAutostart(AutostartBase):
         self._path().unlink(missing_ok=True)
 
     def is_enabled(self) -> bool:
-        return self._path().exists()
+        path = self._path()
+        if not path.exists():
+            return False
+        try:
+            with path.open("rb") as fh:
+                data = plistlib.load(fh)
+        except (OSError, plistlib.InvalidFileException):
+            return False
+        if not isinstance(data, dict):
+            return False
+        arguments = data.get("ProgramArguments")
+        return isinstance(arguments, list) and bool(arguments) and arguments[0] == app_command()[0]
 
 
 def _resolved_app_path() -> Path:

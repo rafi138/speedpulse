@@ -148,9 +148,15 @@ def _as_str_list(value: object, default: list[str]) -> list[str]:
 
 
 def save(path: Path, settings: Settings) -> None:
-    """Write settings as TOML, creating parent directories as needed."""
+    """Write settings as TOML atomically (interrupted saves never corrupt).
+
+    Writes to a sibling temp file, then ``os.replace`` — atomic on POSIX
+    and Windows, so a crash mid-write can never destroy the old config.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(_dump_toml(settings), encoding="utf-8")
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(_dump_toml(settings), encoding="utf-8")
+    os.replace(tmp, path)
 
 
 def _dump_toml(settings: Settings) -> str:
@@ -179,5 +185,8 @@ def _toml_value(value: object) -> str:
     if isinstance(value, (int, float)):
         return repr(value)
     if isinstance(value, list):
-        return json.dumps(value) if value else "[]"
-    return json.dumps(str(value))
+        return json.dumps(value, ensure_ascii=False) if value else "[]"
+    # ensure_ascii=False: JSON's surrogate-pair escapes (𝄞) are
+    # invalid in TOML, so emit non-ASCII characters literally instead (the
+    # file is written UTF-8). Standard escapes like \n and \" stay valid.
+    return json.dumps(str(value), ensure_ascii=False)

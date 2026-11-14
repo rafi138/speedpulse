@@ -32,6 +32,10 @@ from speedpulse.core.interfaces import (
         ("vEthernet (WSL)", True),
         ("vethernet (Default Switch)", True),
         ("ifb0", True),
+        ("br0", True),
+        ("br-lan", True),
+        ("bridge0", True),
+        ("vnet0", True),
     ],
 )
 class TestIsVirtual:
@@ -64,6 +68,12 @@ class TestIsLoopback:
         ("utun3", True),
         ("ppp0", True),
         ("ipsec0", True),
+        ("tailscale0", True),
+        ("Tailscale", True),
+        ("zt5roxao2n", True),
+        ("zerotier one", True),
+        ("WireGuard Tunnel", True),
+        ("cloudflarewarp", True),
         ("eth0", False),
         ("docker0", False),
         ("wlan0", False),
@@ -72,6 +82,24 @@ class TestIsLoopback:
 class TestIsVpn:
     def test_classification(self, name, expected):
         assert is_vpn(name) is expected
+
+
+class TestRealWorldVpnNames:
+    """Lock the real adapter names out of the default aggregate.
+
+    A tunnel's bytes also appear on its carrier NIC, so counting both
+    doubles the user's reported throughput.
+    """
+
+    def test_tailscale_not_counted_by_default(self):
+        assert select_interfaces(["eth0", "tailscale0"]) == ["eth0"]
+
+    def test_tailscale_counts_when_opted_in(self):
+        result = select_interfaces(["eth0", "tailscale0"], include_vpn=True)
+        assert result == ["eth0", "tailscale0"]
+
+    def test_zerotier_not_counted_by_default(self):
+        assert select_interfaces(["wlan0", "zt5roxao2n"]) == ["wlan0"]
 
 
 NAMES = ["eth0", "wlan0", "tun0", "docker0", "lo"]

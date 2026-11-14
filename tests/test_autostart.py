@@ -33,6 +33,15 @@ class TestLinux:
     def test_disable_without_enable_is_noop(self, tmp_path):
         LinuxAutostart(base_dir=tmp_path).disable()  # must not raise
 
+    def test_stale_registration_reports_disabled(self, tmp_path):
+        mgr = LinuxAutostart(base_dir=tmp_path)
+        mgr.enable()
+        # Registration now points at an install location that no longer exists.
+        (tmp_path / "autostart" / "speedpulse.desktop").write_text(
+            "[Desktop Entry]\nExec=/opt/old/install/speedpulse\n", encoding="utf-8"
+        )
+        assert mgr.is_enabled() is False
+
 
 class TestMacOS:
     def test_plist_contents(self, tmp_path):
@@ -61,6 +70,14 @@ class TestMacOS:
             mgr.enable()
         assert mgr.is_enabled() is False
 
+    def test_stale_plist_reports_disabled(self, tmp_path):
+        mgr = MacOSAutostart(base_dir=tmp_path)
+        path = tmp_path / "LaunchAgents" / "org.speedpulse.app.plist"
+        path.parent.mkdir(parents=True)
+        with path.open("wb") as fh:
+            plistlib.dump({"Label": "org.speedpulse.app", "ProgramArguments": ["/opt/old/app"]}, fh)
+        assert mgr.is_enabled() is False
+
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows registry")
 class TestWindows:
@@ -76,8 +93,12 @@ class TestWindows:
 
 class TestCommon:
     def test_quote_exec(self):
-        assert _quote_exec(["plain"]) == "plain"
-        assert _quote_exec(["a b", "c"]) == '"a b" c'
+        # Everything is quoted: quoting only when spaces misses '"' and '%'.
+        assert _quote_exec(["plain"]) == '"plain"'
+        assert _quote_exec(["a b", "c"]) == '"a b" "c"'
+        assert _quote_exec(['a"b']) == '"a\\"b"'
+        assert _quote_exec(["50%"]) == '"50%%"'  # % is a field code in Exec
+        assert _quote_exec([r"c:\app"]) == r'"c:\\app"'
 
     def test_app_command_starts_with_executable(self):
         command = app_command()

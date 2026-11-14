@@ -10,6 +10,7 @@ leftover empty file is harmless.
 
 from __future__ import annotations
 
+import errno
 import logging
 import os
 import sys
@@ -17,6 +18,15 @@ import tempfile
 from pathlib import Path
 
 log = logging.getLogger(__name__)
+
+
+def _contention_errnos() -> frozenset[int]:
+    """Errnos that mean "someone else holds the lock" (platform-dependent)."""
+    names = ("EACCES", "EAGAIN", "EWOULDBLOCK", "EDEADLK", "EDEADLOCK")
+    return frozenset(getattr(errno, name) for name in names if hasattr(errno, name))
+
+
+_CONTENTION_ERRNOS = _contention_errnos()
 
 
 def default_lock_path() -> Path:
@@ -42,10 +52,24 @@ class SingleInstanceLock:
         return self._path
 
     def acquire(self) -> bool:
-        """Return True if we now hold the lock; False if someone else does."""
+        """Return True if we may run (as the primary); False if another instance does.
+
+        Failure policy: a *contention* error (someone holds the lock) means
+        "another instance is running" -> return False. Any other failure
+        (unwritable directory, missing parent, exotic fs) must not render
+        the app unlaunchable, so we fail open and run without the guard.
+        """
         if self._fd is not None:
             return True
-        fd = os.open(self._path, os.O_CREAT | os.O_RDWR, 0o644)
+        try:
+            fd = os.open(self._path, os.O_CREAT | os.O_RDWR, 0o644)
+        except OSError as exc:
+            log.warning(
+                "Cannot create single-instance lock %s (%s); continuing without it",
+                self._path,
+                exc,
+            )
+            return True
         try:
             if sys.platform == "win32":
                 import msvcrt
@@ -57,10 +81,16 @@ class SingleInstanceLock:
                 import fcntl
 
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except (ImportError, OSError):
-            log.debug("Another SpeedPulse instance holds %s", self._path)
+        except OSError as exc:
             os.close(fd)
-            return False
+            if isinstance(exc, BlockingIOError) or exc.errno in _CONTENTION_ERRNOS:
+                log.debug("Another SpeedPulse instance holds %s", self._path)
+                return False
+            log.warning("Single-instance lock failed (%s); continuing without it", exc)
+            return True
+        except ImportError:  # pragma: no cover - msvcrt/fcntl always present on their OS
+            os.close(fd)
+            return True
         try:
             os.ftruncate(fd, 0)
             os.write(fd, str(os.getpid()).encode())

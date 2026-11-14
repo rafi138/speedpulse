@@ -11,15 +11,17 @@ import subprocess
 
 VIRTUAL_PREFIXES = (
     "docker",  # docker0, docker_gwbridge
-    "veth",  # veth1a2b3c
-    "br-",  # br-a1b2c3 (docker bridges)
+    "veth",  # veth1a2b3c (container-side peers)
+    "br",  # br0, br-lan, br-a1b2c3 (bridges, incl. docker's)
+    "bridge",  # bridge0 (macOS)
     "virbr",  # virbr0 (libvirt NAT bridge)
-    "vir",  # vnet*, virbr* catch-all used by the reference project
+    "vir",  # vir* (libvirt misc)
+    "vnet",  # vnet0/vnet1 (libvirt/KVM tap devices)
     "vbox",  # vboxnet0
     "vmnet",  # vmnet1 (VMware host virtual)
     "vethernet",  # vEthernet (WSL / Default Switch) — compared lowercased
     "ifb",  # ifb0 (Intermediate Functional Block)
-    "nat",  # nat64/cli NAT interfaces on some distros
+    "nat",  # nat64/NAT interfaces on some distros
 )
 
 LOOPBACK_EXACT = frozenset({"lo", "lo0", "lo1", "lo2", "lo3", "loopback"})
@@ -29,10 +31,18 @@ VPN_PREFIXES = (
     "tun",  # tun0/tun1 (OpenVPN, generic TUN devices)
     "tap",  # tap0
     "wg",  # wg0, wg-quick names
+    "wireguard",  # WireGuard-Windows adapters named after the service
     "ppp",  # ppp0 (dial-in / some mobile helpers)
     "utun",  # macOS utun0..utunN (system + VPN tunnels)
     "ipsec",  # ipsec0
     "gretap",  # GRE tunnels
+    "tailscale",  # tailscale0 / "Tailscale" (Windows friendly name)
+    "zt",  # ZeroTier: zt0, zt5roxao2n...
+    "zerotier",  # "ZeroTier One" (Windows friendly name)
+    "cloudflarewarp",  # Cloudflare WARP adapter
+    # NOTE: some VPN clients name their adapter arbitrarily (e.g. WireGuard
+    # for Windows uses the tunnel's config name); those can be excluded by
+    # hand in settings.
 )
 
 

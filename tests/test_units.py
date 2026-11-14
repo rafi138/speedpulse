@@ -11,10 +11,16 @@ class TestScaleRate:
         assert scale_rate(0, use_bits=True) == (0.0, "bps")
         assert scale_rate(999, use_bits=True) == (999.0, "bps")
         assert scale_rate(1000, use_bits=True) == (1.0, "Kbps")
-        assert scale_rate(999_999, use_bits=True) == (999.999, "Kbps")
+        assert scale_rate(999_940, use_bits=True) == (999.94, "Kbps")
         assert scale_rate(1_000_000, use_bits=True) == (1.0, "Mbps")
         assert scale_rate(12_345_678, use_bits=True) == (12.345678, "Mbps")
         assert scale_rate(1.5e9, use_bits=True) == (1.5, "Gbps")
+
+    def test_boundary_display_precision_promotes(self):
+        # 999.999 Kbps would render as "1000.0 Kbps" (an impossible value);
+        # it must promote to the next unit instead.
+        assert scale_rate(999_999, use_bits=True) == (1.0, "Mbps")
+        assert format_rate(999_999_999, use_bits=True) == "1.0 Gbps"
 
     def test_bits_negative_clamps_to_zero(self):
         assert scale_rate(-5, use_bits=True) == (0.0, "bps")

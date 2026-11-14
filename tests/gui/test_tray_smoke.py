@@ -8,7 +8,14 @@ tests; here we verify the UI layer wires up and reacts to snapshots.
 
 import pytest
 
-pytest.importorskip("PySide6.QtWidgets")
+# importorskip only catches ImportError; a PySide6 whose Qt shared libraries
+# are missing (headless server, WSL, minimal container) raises OSError from
+# dlopen — treat that as "not loadable" too instead of erroring the suite.
+try:
+    import PySide6.QtWidgets  # noqa: F401
+except (ImportError, OSError):
+    pytest.skip("PySide6 is not loadable in this environment", allow_module_level=True)
+
 pytestmark = pytest.mark.gui
 
 

@@ -26,4 +26,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Test suite: pure-core unit tests plus offscreen GUI smoke tests; CI across
   Linux/Windows/macOS on Python 3.11–3.14 with ruff and pyright gates.
 
-[Unreleased]: https://github.com/OWNER/speedpulse/compare/v0.0.0...HEAD
+[Unreleased]: https://github.com/rafi138/speedpulse/compare/v0.1.0...HEAD

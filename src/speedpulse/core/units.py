@@ -15,9 +15,18 @@ _BINARY = 1024.0
 def _scale(value: float, base: float, units: tuple[str, ...]) -> tuple[float, str]:
     scaled = float(value)
     index = 0
-    while scaled >= base and index < len(units) - 1:
-        scaled /= base
-        index += 1
+    while index < len(units) - 1:
+        if scaled >= base:
+            scaled /= base
+            index += 1
+        elif round(scaled, 1) >= base:
+            # 999.97 with 1-decimal display would read "1000.0 Kbps" —
+            # promote to the next unit instead of showing an impossible
+            # value ("1.0 Mbps").
+            scaled = round(scaled, 1) / base
+            index += 1
+        else:
+            break
     return scaled, units[index]
 
 

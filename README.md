@@ -32,7 +32,7 @@ interface counters — no external servers involved.
 **Not yet published.** Until the first release, install from source:
 
 ```bash
-git clone https://github.com/OWNER/speedpulse
+git clone https://github.com/rafi138/speedpulse
 cd speedpulse
 python -m venv .venv && source .venv/bin/activate
 pip install -e .

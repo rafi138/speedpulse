@@ -14,7 +14,7 @@ maintainer before it is merged.
 ## Development setup
 
 ```bash
-git clone https://github.com/OWNER/speedpulse && cd speedpulse
+git clone https://github.com/rafi138/speedpulse && cd speedpulse
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 pre-commit install
