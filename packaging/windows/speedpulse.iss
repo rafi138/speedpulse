@@ -2,8 +2,11 @@
 ; Build from the repository root with the PyInstaller payload present:
 ;   iscc packaging\windows\speedpulse.iss /DAppVersion=0.1.0
 
+; Version comes from the SPEEDPULSE_VERSION environment variable (set by
+; release.yml and by local builds), so no slash-arguments are needed:
+; Git Bash on CI mangles /D-style flags into Windows paths.
 #ifndef AppVersion
-#define AppVersion "0.1.0"
+#define AppVersion Environment("SPEEDPULSE_VERSION")
 #endif
 
 [Setup]

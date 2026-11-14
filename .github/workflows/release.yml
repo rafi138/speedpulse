@@ -67,8 +67,8 @@ jobs:
           ./dist/speedpulse/speedpulse.exe --version
       - name: Build installer (Inno Setup, preinstalled on the runner)
         run: |
-          # iscc requires defines BEFORE the script filename
-          iscc /DAppVersion="${GITHUB_REF_NAME#v}" packaging/windows/speedpulse.iss
+          # Version via env var: Git Bash mangles /D-style iscc flags into paths
+          SPEEDPULSE_VERSION="${GITHUB_REF_NAME#v}" iscc packaging/windows/speedpulse.iss
       - name: Build portable zip
         run: |
           python -c "import shutil; shutil.make_archive('dist/SpeedPulse-${GITHUB_REF_NAME#v}-portable-win64', 'zip', 'dist', 'speedpulse')"
